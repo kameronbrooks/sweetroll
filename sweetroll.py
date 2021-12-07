@@ -39,6 +39,28 @@ def get_perp_vector2_ccw(v2):
 #                           UVBmesh Class
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
+class UVIsland:
+     
+    def __init__(self, uvbmesh, loops):
+        self.loops = loops
+        self.uvbmesh = uvbmesh
+        self.name = "island"
+        self.quads_only = False
+        self.uv_layer = uvbmesh.uv_layer
+        self.initialize()
+        
+    def initialize(self):
+        for loop in self.loops:
+            if len(loop.face.loops) != 4:
+                self.quads_only = False
+                return
+        self.quads_only = True
+        
+    def __iter__(self):
+        return self.loops.__iter__()
+        
+        
+        
 class UVBmesh:
     """ A UVBmesh class is a class that works specifically with uv related aspects of a bmesh object"""
     def __init__(self, ob):
@@ -47,8 +69,8 @@ class UVBmesh:
         self.uv_layer = self.bmesh.loops.layers.uv.verify()
         self.islands = []
         self.calculate_islands()
-        
-        
+    
+    
     def calculate_islands(self):
         """ Calculate the islands for this UVBMesh """
         self.islands = []
@@ -61,7 +83,8 @@ class UVBmesh:
                         break
                 
                 if not found_island:
-                    self.islands.append(self.get_island_loops(loop))
+                    self.islands.append(UVIsland(self, self.get_island_loops(loop)))
+    
     
     def get_island_by_loop(self, loop):
         """ Find the island that contains the loop """
@@ -70,16 +93,19 @@ class UVBmesh:
                 return island
         return None
     
+    
     def update_mesh(self):
         """ Save changes to the mesh """
         bmesh.update_edit_mesh(self.obj.data)
-        
+    
+    
     def is_vert_selected(self, vert):
         """ Is this vertex selected in the UV editor """
         for loop in vert.link_loops:
             if(loop[self.uv_layer].select):
                 return True
         return False
+    
     
     def get_selected_uv_loops(self):
         output = []
@@ -89,6 +115,7 @@ class UVBmesh:
                     output.append(loop)
         return output
     
+    
     def count_selected_loops(self, vert):
         """ Count the number of selected loops for this vert """
         count = 0
@@ -96,6 +123,7 @@ class UVBmesh:
             if(loop[self.uv_layer].select):
                 count += 1
         return count
+    
     
     def count_unique_vertex_uvs(self, vert, selected_only=False):
         """ Count the number of unique uv coordinates that represent a vertex"""
@@ -111,6 +139,7 @@ class UVBmesh:
                 unique_loops.add((vert.index, uv[0], uv[1]))
         #print(unique_loops)
         return len(unique_loops)
+    
     
     def get_island_loops(self, loop):
         """ Get the loops that belong to the selected island """
@@ -141,9 +170,8 @@ class UVBmesh:
                 output.add(fl)
         
         return output
-        
-        
-        
+    
+    
     def select_all(self):
         """ Select all of the uvs in the mesh """
         for face in self.bmesh.faces:
@@ -152,12 +180,14 @@ class UVBmesh:
                 loop[self.uv_layer].select = True
         self.update_mesh()
     
+    
     def deselect_all(self):
         """ Deselect all of the uvs in the mesh """
         for face in self.bmesh.faces:
             for loop in face.loops:
                 loop[self.uv_layer].select = False
         self.update_mesh()
+    
     
     def select(self, loops, deselect_others = False):
         """ Select the specified uvs on the mesh """
@@ -172,7 +202,8 @@ class UVBmesh:
                         loop[self.uv_layer].select = True
                         
         self.update_mesh()
-        
+    
+    
     def move_loop_uv(self,loop, pos):
         if not isinstance(pos, Vector):
             pos = Vector(pos)
@@ -180,10 +211,12 @@ class UVBmesh:
         for l in loop.vert.link_loops:
             if l[self.uv_layer].uv == loop[self.uv_layer].uv:
                 l[self.uv_layer].uv = pos
-                
+    
+         
     def get_loop_uv_coord(self, loop):
         """ Get the uv coord for a loop """
         return loop[self.uv_layer].uv
+    
     
     def get_shared_loops(self,loop):
         """ Get a list of connected loops that share the same uv coord as the input loop """
@@ -192,7 +225,8 @@ class UVBmesh:
             if l != loop and l[self.uv_layer].uv == loop[self.uv_layer].uv:
                 output.append(l)
         return output
-        
+    
+    
     def get_corners(self):
         """ Find the corners of the UV island """
         output = []
@@ -204,6 +238,7 @@ class UVBmesh:
                 if uv_count >= selected_loops:
                     output.append(vert)
         return output
+    
     
     def get_u_path(self,loop):
         loop[self.uv_layer].select = False
@@ -235,12 +270,11 @@ def test_func():
     for ob in obs:
         uvbm = UVBmesh(ob)
         
-        print(len(uvbm.islands))
+        selected_loops = uvbm.get_selected_uv_loops();
         
-        uvbm.select(uvbm.islands[2])
-        
+        uvbm.get_u_path(selected_loops[0])
         #print(corners)
-        #uvbm.select(list(zip(*corners))[0])
+        #uvbm.select(selected_loops)
 
 
 if __name__=="__main__":
