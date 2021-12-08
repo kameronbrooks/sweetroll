@@ -36,7 +36,7 @@ def get_perp_vector2_ccw(v2):
 
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-#                           UVBmesh Class
+#                           UVIsland Class
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 class UVIsland:
@@ -58,8 +58,28 @@ class UVIsland:
         
     def __iter__(self):
         return self.loops.__iter__()
-        
-        
+    
+    def get_corners(self):
+        output = []
+        for loop in self.loops:
+            uv_coord = loop[self.uv_layer].uv
+            is_corner = True
+            print(uv_coord)
+            for v_loop in loop.vert.link_loops:
+                if v_loop != loop and v_loop[self.uv_layer].uv == uv_coord:
+                    is_corner = False
+                    break
+            if is_corner:
+                output.append(loop)
+        return output
+                    
+    
+    def map_grid(self):
+        pass
+
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+#                           UVBmesh Class
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
         
 class UVBmesh:
     """ A UVBmesh class is a class that works specifically with uv related aspects of a bmesh object"""
@@ -171,7 +191,7 @@ class UVBmesh:
         
         return output
     
-    
+
     def select_all(self):
         """ Select all of the uvs in the mesh """
         for face in self.bmesh.faces:
@@ -234,21 +254,53 @@ class UVBmesh:
             if self.is_vert_selected(vert):  
                 uv_count = self.count_unique_vertex_uvs(vert, selected_only=True)
                 selected_loops = self.count_selected_loops(vert)
-                #print("{} {}".format(uv_count, selected_loops))
+
                 if uv_count >= selected_loops:
                     output.append(vert)
         return output
     
+    def face_shared_verts(self, face0, face1):
+        """ Which verts are shared by both faces """
+        shared = []
+        for vert_0 in face0.verts:
+            for vert_1 in face1.verts:
+                if vert_0.index == vert_1.index:
+                    shared.append(vert_0)
+        return shared
+                
     
-    def get_u_path(self,loop):
-        loop[self.uv_layer].select = False
+    
+    def get_cw_path(self,loop):
         
-        loop.link_loop_prev[self.uv_layer].select = True
+        output = []
+        i = 0
+        max_search = 100000
+        while i < max_search:
+            next = loop.link_loop_prev
+            shared_loops = self.get_shared_loops(next)
+            
+            if len(shared_loops) < 1:
+                output.append(next)
+                break
+            elif len(shared_loops) == 1:
+                output.append(shared_loops[0])
+            else:
+                for shared_loop in shared_loops:
+                    if next.link_loop_prev.vert.index == shared_loop.link_loop_next.vert.index:
+                        output.append(shared_loop)
+                    
+            i += 1
+        #radial_next = loop.link_loop_next.link_loop_radial_next.link_loop_next
+        
+        #next[self.uv_layer].select = True
+        #radial_next[self.uv_layer].select = True
         
         self.update_mesh()
         
         return loop.link_loop_prev
-        
+    
+    
+
         
     
 
@@ -270,11 +322,13 @@ def test_func():
     for ob in obs:
         uvbm = UVBmesh(ob)
         
-        selected_loops = uvbm.get_selected_uv_loops();
+        corners = uvbm.islands[4].get_corners()
         
-        uvbm.get_u_path(selected_loops[0])
-        #print(corners)
-        #uvbm.select(selected_loops)
+        #selected_loops = uvbm.get_selected_uv_loops();
+        
+        
+        print(corners)
+        uvbm.select(corners)
 
 
 if __name__=="__main__":
