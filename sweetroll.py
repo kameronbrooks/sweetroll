@@ -73,9 +73,94 @@ class UVIsland:
             if is_corner:
                 output.append(loop)
         return output
-                    
+    
     
     def map_grid(self):
+        if not self.quads_only:
+            raise Exception("This island must be all quads")
+        corners = self.get_corners()
+        
+        
+        
+        c_loop = corners[0]
+        grid = [[(c_loop.face,c_loop)]]
+        starting_face = c_loop.face
+        """ Add a safety incase something crazy happens """
+        i = 0
+        max_iters = 1000000
+        straight_length = 0
+        height_segment_distances = []
+        width_segment_distances = []
+        """ First create all of the rows by traversing the edge nodes """
+        while i < max_iters:
+            i += 1
+            
+            next = c_loop.link_loop_prev
+            shared_loops = self.uvbmesh.get_shared_loops(next)
+            
+            straight_length += self.uvbmesh.get_uv_distance(c_loop, next)
+            height_segment_distances.append(self.uvbmesh.get_uv_distance(c_loop, next))
+            
+            if len(shared_loops) < 1:
+                break
+            for shared_loop in shared_loops:
+                if next.link_loop_prev.vert == shared_loop.link_loop_next.vert:       
+                    grid.append([(shared_loop.face, shared_loop)])
+                    c_loop = shared_loop
+                    break
+        
+        column_count = 1
+        row_count = len(grid)
+        
+        
+        for row in grid: 
+            c_loop = row[0][1]
+            
+            i = 0
+            while i < max_iters:
+                i += 1
+                next = c_loop.link_loop_next
+                shared_loops = self.uvbmesh.get_shared_loops(next)
+                print(next.face.index)
+                if len(shared_loops) < 1:
+                    break
+                found_neighbor_face = False
+                for shared_loop in shared_loops:
+                    if next.link_loop_next.vert == shared_loop.link_loop_prev.vert:       
+                        row.append((shared_loop.face, shared_loop))
+                        c_loop = shared_loop
+                        found_neighbor_face = True
+                        break
+                if not found_neighbor_face:
+                    break
+            
+            if len(row) > column_count:
+                column_count = len(row)
+        
+        segment_length = straight_length / row_count
+                
+        
+        root_uv = row[0][1][self.uv_layer].uv + Vector((0,0))
+        
+        for y in range(row_count):
+            row = grid[y]
+
+            for x in range(len(row)):
+                cell = row[x]
+                
+                cell[1][self.uv_layer].uv = root_uv + Vector((segment_length * x, segment_length * y))
+                cell[1].link_loop_prev[self.uv_layer].uv = root_uv + Vector((segment_length * x, segment_length * (y + 1)))
+                cell[1].link_loop_next[self.uv_layer].uv = root_uv + Vector((segment_length * (x + 1), segment_length * y))
+                cell[1].link_loop_prev.link_loop_prev[self.uv_layer].uv = root_uv + Vector((segment_length * (x + 1), segment_length * (y + 1)))
+                
+        self.uvbmesh.update_mesh()           
+        
+        
+        
+                    
+    '''
+    def map_grid(self):
+        """ Return an ordered grid of nodes with one of the corners as 0,0 and the oposite corner n,m"""
         if not self.quads_only:
             raise Exception("This island must be all quads")
         corners = self.get_corners()
@@ -84,11 +169,11 @@ class UVIsland:
         c_loop = corners[0]
         
         grid = [[c_loop]]
-        #c_loop[self.uv_layer].select = True
-        
+        c_loop[self.uv_layer].select = True
+        """ Add a safety incase something crazy happens """
         i = 0
         max_iterations = 10000
-        
+        """ First create all of the rows by traversing the edge nodes """
         while i < max_iterations:
             i += 1
             
@@ -99,11 +184,12 @@ class UVIsland:
                 break
             for shared_loop in shared_loops:
                 if next.link_loop_prev.vert == shared_loop.link_loop_next.vert:
-                    #shared_loop[self.uv_layer].select = True
+                    shared_loop[self.uv_layer].select = True
                     grid.append([shared_loop])
+                    print("Adding row: {}".format(grid[-1][0].index))
                     c_loop = shared_loop
                     break
-        
+        """ For each row, traverse the horizontal nodes to complete the grid """
         for row in grid:
             c_loop = row[0]
             i = 0
@@ -115,20 +201,21 @@ class UVIsland:
                 shared_loops = self.uvbmesh.get_shared_loops(next)
                 
                 if len(shared_loops) <= 1:
-                    #next[self.uv_layer].select = True
+                    next[self.uv_layer].select = True
+                    print("Adding to row[{}]: {}".format(row[0].index, next.index))
                     row.append(next)
-                    
-                if len(shared_loops) < 1:
                     break
                 for shared_loop in shared_loops:
                     if next.link_loop_next.vert == shared_loop.link_loop_prev.vert:
-                        #shared_loop[self.uv_layer].select = True
+                        shared_loop[self.uv_layer].select = True
                         row.append(shared_loop)
+                        print("Adding to row[{}]: {}".format(row[0].index, shared_loop.index))
                         c_loop = shared_loop
                         break
         
+        """ Handle the top edge as a special case """
         next = grid[-1][0].link_loop_prev
-        #next[self.uv_layer].select = True
+        next[self.uv_layer].select = True
         grid.append([next])
         
         c_loop = next
@@ -139,17 +226,17 @@ class UVIsland:
             shared_loops = self.uvbmesh.get_shared_loops(next)
             
             if len(shared_loops) < 1:
-                #next[self.uv_layer].select = True
+                next[self.uv_layer].select = True
                 grid[-1].append(next)
                 break
             for shared_loop in shared_loops:
                 if next.link_loop_prev.vert == shared_loop.link_loop_next.vert:
-                    #shared_loop[self.uv_layer].select = True
+                    shared_loop[self.uv_layer].select = True
                     grid[-1].append(shared_loop)
                     c_loop = shared_loop
                     break
         return grid
-            
+    ''' 
                 
         
         
@@ -197,6 +284,9 @@ class UVBmesh:
                 return island
         return None
     
+    def get_uv_distance(self, loop1, loop2):
+        """ Get distance between 2 uvs """
+        return (loop2[self.uv_layer].uv - loop1[self.uv_layer].uv).magnitude
     
     def update_mesh(self):
         """ Save changes to the mesh """
@@ -307,7 +397,7 @@ class UVBmesh:
         self.update_mesh()
     
     
-    def move_loop_uv(self,loop, pos):
+    def move_loop_uv_coord(self,loop, pos):
         if not isinstance(pos, Vector):
             pos = Vector(pos)
             
@@ -405,11 +495,10 @@ def test_func():
     for ob in obs:
         uvbm = UVBmesh(ob)
         
-        corners = uvbm.islands[0].map_grid()
         
-        uvbm.update_mesh()
-        #selected_loops = uvbm.get_selected_uv_loops();
         
+        selected_loops = uvbm.get_selected_uv_loops();
+        grid = uvbm.get_island_by_loop(selected_loops[0]).map_grid()
         
         #print(corners)
         #uvbm.select(corners)
