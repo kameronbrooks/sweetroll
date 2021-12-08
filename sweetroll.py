@@ -60,11 +60,12 @@ class UVIsland:
         return self.loops.__iter__()
     
     def get_corners(self):
+        """ Get the corners of this island """
         output = []
         for loop in self.loops:
             uv_coord = loop[self.uv_layer].uv
             is_corner = True
-            print(uv_coord)
+
             for v_loop in loop.vert.link_loops:
                 if v_loop != loop and v_loop[self.uv_layer].uv == uv_coord:
                     is_corner = False
@@ -75,7 +76,90 @@ class UVIsland:
                     
     
     def map_grid(self):
-        pass
+        if not self.quads_only:
+            raise Exception("This island must be all quads")
+        corners = self.get_corners()
+        
+        index_2d = [0,0]
+        c_loop = corners[0]
+        
+        grid = [[c_loop]]
+        #c_loop[self.uv_layer].select = True
+        
+        i = 0
+        max_iterations = 10000
+        
+        while i < max_iterations:
+            i += 1
+            
+            next = c_loop.link_loop_prev
+            shared_loops = self.uvbmesh.get_shared_loops(next)
+            
+            if len(shared_loops) < 1:
+                break
+            for shared_loop in shared_loops:
+                if next.link_loop_prev.vert == shared_loop.link_loop_next.vert:
+                    #shared_loop[self.uv_layer].select = True
+                    grid.append([shared_loop])
+                    c_loop = shared_loop
+                    break
+        
+        for row in grid:
+            c_loop = row[0]
+            i = 0
+            
+            while i < max_iterations:
+                i += 1
+                
+                next = c_loop.link_loop_next
+                shared_loops = self.uvbmesh.get_shared_loops(next)
+                
+                if len(shared_loops) <= 1:
+                    #next[self.uv_layer].select = True
+                    row.append(next)
+                    
+                if len(shared_loops) < 1:
+                    break
+                for shared_loop in shared_loops:
+                    if next.link_loop_next.vert == shared_loop.link_loop_prev.vert:
+                        #shared_loop[self.uv_layer].select = True
+                        row.append(shared_loop)
+                        c_loop = shared_loop
+                        break
+        
+        next = grid[-1][0].link_loop_prev
+        #next[self.uv_layer].select = True
+        grid.append([next])
+        
+        c_loop = next
+        i = 0
+        while i < max_iterations:
+            i += 1
+            next = c_loop.link_loop_prev
+            shared_loops = self.uvbmesh.get_shared_loops(next)
+            
+            if len(shared_loops) < 1:
+                #next[self.uv_layer].select = True
+                grid[-1].append(next)
+                break
+            for shared_loop in shared_loops:
+                if next.link_loop_prev.vert == shared_loop.link_loop_next.vert:
+                    #shared_loop[self.uv_layer].select = True
+                    grid[-1].append(shared_loop)
+                    c_loop = shared_loop
+                    break
+        return grid
+            
+                
+        
+        
+                    
+            
+        
+        
+        
+        
+        
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 #                           UVBmesh Class
@@ -196,7 +280,6 @@ class UVBmesh:
         """ Select all of the uvs in the mesh """
         for face in self.bmesh.faces:
             for loop in face.loops:
-                print(loop[self.uv_layer].select)
                 loop[self.uv_layer].select = True
         self.update_mesh()
     
@@ -322,13 +405,14 @@ def test_func():
     for ob in obs:
         uvbm = UVBmesh(ob)
         
-        corners = uvbm.islands[4].get_corners()
+        corners = uvbm.islands[0].map_grid()
         
+        uvbm.update_mesh()
         #selected_loops = uvbm.get_selected_uv_loops();
         
         
-        print(corners)
-        uvbm.select(corners)
+        #print(corners)
+        #uvbm.select(corners)
 
 
 if __name__=="__main__":
