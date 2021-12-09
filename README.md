@@ -10,9 +10,27 @@ Just select a vertex in the UV editor, right-click and select "Sweet (Un)roll" a
 Version 1.1.1
 Works with Blender 3.0
 
+
+
 ## Installation
 
 Download the zip file in the blender plugin directory
 Install the addon in Blender by going to Preferences > Add-ons > Install and installing the sweetroll.zip file
 
 
+## Usage
+
+Select 1 or more uvs on the uv island(s) you want to unroll. Right click and select Sweet(un)roll
+
+![Demo](single.gif)
+
+
+You can also select many islands at once.
+
+![Demo](multiple.gif)
+
+
+
+## Notes
+- The command will only work for islands that are made entirely of quads
+- It will not work on cyclical loops
