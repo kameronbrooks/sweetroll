@@ -72,15 +72,51 @@ class UVIsland:
                 output.append(loop)
         return output
     
+    def get_corner_with_longest_edge(self, corners):
+        """ Gets the corner with the longest edge """
+        max_length = 0
+        max_corner = None
+        for corner in corners:
+            c_loop = corner
+            
+            starting_face = c_loop.face
+            """ Add a safety incase something crazy happens """
+            i = 0
+            max_iters = 1000000
+            straight_length = 0
+            
+            """ First create all of the rows by traversing the edge nodes """
+            while i < max_iters:
+                i += 1
+                
+                next = c_loop.link_loop_prev
+                shared_loops = self.uvbmesh.get_shared_loops(next)
+                
+                """ Calculate the distance between the current and next """
+                segment_dist = self.uvbmesh.get_uv_distance(c_loop, next)
+                straight_length += segment_dist
+                
+                if len(shared_loops) < 1:
+                    break
+                for shared_loop in shared_loops:
+                    if next.link_loop_prev.vert == shared_loop.link_loop_next.vert:  
+                        c_loop = shared_loop
+                        break
+            if straight_length > max_length:
+                max_corner = corner
+                max_length = straight_length
+                
+        print(max_corner)
+        return max_corner
+    
     
     def map_grid(self):
         if not self.quads_only:
             raise Exception("This island must be all quads")
         corners = self.get_corners()
-        
-        
-        
-        c_loop = corners[0]
+        """ Get the longest edge """
+        c_loop = self.get_corner_with_longest_edge(corners)
+
         grid = [[(c_loop.face,c_loop)]]
         starting_face = c_loop.face
         """ Add a safety incase something crazy happens """
@@ -422,10 +458,6 @@ class UV_OT_sweetroll(bpy.types.Operator):
                     island.map_grid()
                 except:
                     continue
-            
-            
-        
-        
         return {'FINISHED'}
 
 def sweetrollMenuFunc(self, context):
