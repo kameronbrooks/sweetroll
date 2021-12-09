@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Sweetroll",
     "author": "Kameron Brooks",
-    "version": (1, 1, 1),
+    "version": (2, 0, 0),
     "blender": (3, 0, 0),
     "location": "View2D > UV > Sweet(Un)roll",
     "description": "Unroll your rolled up uv island",
