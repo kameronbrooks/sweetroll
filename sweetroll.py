@@ -33,14 +33,12 @@ def get_perp_vector2_ccw(v2):
     """ Get a counter-clockwise perpendicuar vector to v2 """
     return Vector((-v2.y, v2.x))
 
-
-
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 #                           UVIsland Class
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 class UVIsland:
-     
+    """ Represents a UV island. Contains convenience methods for working with islands """
     def __init__(self, uvbmesh, loops):
         self.loops = loops
         self.uvbmesh = uvbmesh
@@ -48,14 +46,14 @@ class UVIsland:
         self.quads_only = False
         self.uv_layer = uvbmesh.uv_layer
         self.initialize()
-        
+    
     def initialize(self):
         for loop in self.loops:
             if len(loop.face.loops) != 4:
                 self.quads_only = False
                 return
         self.quads_only = True
-        
+     
     def __iter__(self):
         return self.loops.__iter__()
     
@@ -145,11 +143,11 @@ class UVIsland:
             
             if len(row) > column_count:
                 column_count = len(row)
-        
+        # This does not matter now since we are using the saved distances of the rows and columns
         segment_length = straight_length / row_count
-                
-        root_uv = row[0][1][self.uv_layer].uv + Vector((0,0))
         
+        root_uv = row[0][1][self.uv_layer].uv + Vector((0,0))
+        """ Move all loops to where they need to go based on a distance from the root_uv"""
         for y in range(row_count):
             row = grid[y]
 
@@ -389,23 +387,63 @@ class UVBmesh:
         
         return loop.link_loop_prev
     
-    
-
-        
-    
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 #                           Plugin
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
+class UV_OT_sweetroll(bpy.types.Operator):
+    """Unroll Your Rolled UV Island"""
+    bl_idname = "uv.sweetroll"
+    bl_label = "Sweet (Un)roll"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    @classmethod
+    def poll(cls, context):
+        all_objects_edit_mode = True
+        for ob in context.selected_editable_objects:
+            if ob.type != 'MESH' or ob.mode != 'EDIT':
+                all_objects_edit_mode = False
+                break
+        return all_objects_edit_mode
+    
+    def execute(self, context):
+        for ob in context.selected_editable_objects:
+            
+            uvbm = UVBmesh(ob)
+            
+            selected_loops = uvbm.get_selected_uv_loops()
+            selected_islands = set([])
+            for selected_loop in selected_loops:
+                selected_islands.add(uvbm.get_island_by_loop(selected_loop))
+            
+            for island in selected_islands:
+                try:
+                    island.map_grid()
+                except:
+                    continue
+            
+            
+        
+        
+        return {'FINISHED'}
 
+def sweetrollMenuFunc(self, context):
+    self.layout.operator("uv.sweetroll")
 
 
 def register():
-    pass
+    bpy.utils.register_class(UV_OT_sweetroll)
+    # add to menu
+    bpy.types.IMAGE_MT_uvs.append(sweetrollMenuFunc)
+    # add to context menu
+    bpy.types.IMAGE_MT_uvs_context_menu.append(sweetrollMenuFunc)
 
 def unregister():
-    pass
+    bpy.utils.unregister_class(UV_OT_sweetroll)
+    
+    bpy.types.IMAGE_MT_uvs.remove(sweetrollMenuFunc)
+    bpy.types.IMAGE_MT_uvs_context_menu.remove(sweetrollMenuFunc)
 
 def test_func():
     obs = bpy.context.selected_editable_objects
@@ -422,7 +460,5 @@ def test_func():
 
 
 if __name__=="__main__":
-     #register()
-     os.system('cls')
-     test_func()
+     register()
      
