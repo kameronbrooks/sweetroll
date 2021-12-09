@@ -9,3 +9,10 @@ Just select a vertex in the UV editor, right-click and select "Sweet (Un)roll" a
 
 Version 1.1.1
 Works with Blender 3.0
+
+## Installation
+
+Download the zip file in the blender plugin directory
+Install the addon in Blender by going to Preferences > Add-ons > Install and installing the sweetroll.zip file
+
+
