@@ -210,7 +210,7 @@ class UVBmesh:
         self.bmesh = bmesh.from_edit_mesh(ob.data)
         self.uv_layer = self.bmesh.loops.layers.uv.verify()
         self.islands = []
-        self.calculate_islands()
+        
     
     
     def calculate_islands(self):
@@ -230,6 +230,9 @@ class UVBmesh:
     
     def get_island_by_loop(self, loop):
         """ Find the island that contains the loop """
+        if len(self.islands) < 1:
+            self.calculate_islands()
+        
         for island in self.islands:
             if loop in island:
                 return island
@@ -260,6 +263,15 @@ class UVBmesh:
                     output.append(loop)
         return output
     
+    def has_selected_uv_loop(self):
+        """ Returns true if any uv is selected on this mesh """
+        output = []
+        for face in self.bmesh.faces:
+            for loop in face.loops:
+                if loop[self.uv_layer].select:
+                    return True
+        return False
+    
     
     def count_selected_loops(self, vert):
         """ Count the number of selected loops for this vert """
@@ -288,6 +300,7 @@ class UVBmesh:
     
     def get_island_loops(self, loop):
         """ Get the loops that belong to the selected island """
+        
         output = set([])
         faces = []
         check_faces = deque([loop.face])
@@ -391,6 +404,9 @@ class UVBmesh:
                 if vert_0.index == vert_1.index:
                     shared.append(vert_0)
         return shared
+    
+    def free(self):
+        self.bmesh.free()
                 
     
     
@@ -414,11 +430,6 @@ class UVBmesh:
                         output.append(shared_loop)
                     
             i += 1
-        #radial_next = loop.link_loop_next.link_loop_radial_next.link_loop_next
-        
-        #next[self.uv_layer].select = True
-        #radial_next[self.uv_layer].select = True
-        
         self.update_mesh()
         
         return loop.link_loop_prev
@@ -445,19 +456,22 @@ class UV_OT_sweetroll(bpy.types.Operator):
     
     def execute(self, context):
         for ob in context.selected_editable_objects:
-            
-            uvbm = UVBmesh(ob)
-            
-            selected_loops = uvbm.get_selected_uv_loops()
-            selected_islands = set([])
-            for selected_loop in selected_loops:
-                selected_islands.add(uvbm.get_island_by_loop(selected_loop))
-            
-            for island in selected_islands:
-                try:
-                    island.map_grid()
-                except:
+            try:
+                uvbm = UVBmesh(ob)
+                # if not selected we can skip it
+                if not uvbm.has_selected_uv_loop():
                     continue
+                
+                selected_loops = uvbm.get_selected_uv_loops()
+                
+                selected_islands = set([])
+                for selected_loop in selected_loops:
+                    selected_islands.add(uvbm.get_island_by_loop(selected_loop))  
+                for island in selected_islands:
+                    island.map_grid()
+            except:
+                continue
+            
         return {'FINISHED'}
 
 def sweetrollMenuFunc(self, context):
@@ -482,13 +496,9 @@ def test_func():
     for ob in obs:
         uvbm = UVBmesh(ob)
         
-        
-        
         selected_loops = uvbm.get_selected_uv_loops();
         grid = uvbm.get_island_by_loop(selected_loops[0]).map_grid()
-        
-        #print(corners)
-        #uvbm.select(corners)
+
 
 
 if __name__=="__main__":
