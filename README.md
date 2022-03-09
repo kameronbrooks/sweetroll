@@ -8,7 +8,7 @@ Do you strongly dislike straightening your rolled-up uv islands in blender? Are 
 Just select a vertex in the UV editor, right-click and select "Sweet (Un)roll" and your semi-circular uv strip will be straight in the blink of an eye!
 
 Version 1.1.1
-Works with Blender 3.0
+Works with Blender 3.x (Confirmed functional for 3.1)
 
 
 
