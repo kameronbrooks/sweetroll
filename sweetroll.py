@@ -182,7 +182,10 @@ class UVIsland:
         # This does not matter now since we are using the saved distances of the rows and columns
         segment_length = straight_length / row_count
         
-        root_uv = row[0][1][self.uv_layer].uv + Vector((0,0))
+        # use the uv coordinate of the first cell in the first row as our root
+        # position; the variable "row" from the previous loop would otherwise
+        # reference the last processed row
+        root_uv = grid[0][0][1][self.uv_layer].uv.copy()
         """ Move all loops to where they need to go based on a distance from the root_uv"""
         for y in range(row_count):
             row = grid[y]
